@@ -1,0 +1,10 @@
+{
+  "name": "h-wolf-vw-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "H Wolf VW website with product management and first-party chat",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
