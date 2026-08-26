@@ -418,12 +418,8 @@ async function route(req, res) {
       });
     }
   }
-
-  /* ---------------------------------------------------------
-     IMAGE UPLOAD
-     
-     This keeps the existing upload behavior so your current
-     admin page continues working.
+    /* ---------------------------------------------------------
+     IMAGE UPLOAD - SUPABASE STORAGE
      --------------------------------------------------------- */
 
   if (
@@ -476,28 +472,58 @@ async function route(req, res) {
           ''
         );
 
-        const filePath = path.join(
-          PUBLIC,
-          'images',
-          filename
+        const buffer = Buffer.from(
+          data,
+          'base64'
         );
 
-        fs.writeFileSync(
-          filePath,
-          Buffer.from(data, 'base64')
+        const storagePath =
+          `Products/${filename}`;
+
+        const uploadResponse = await fetch(
+          `${SUPABASE_URL}/storage/v1/object/${storagePath}`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_SECRET_KEY,
+              Authorization:
+                `Bearer ${SUPABASE_SECRET_KEY}`,
+              'Content-Type':
+                mime[ext] ||
+                'application/octet-stream',
+              'x-upsert': 'true'
+            },
+            body: buffer
+          }
         );
 
-        out.push('/images/' + filename);
+        if (!uploadResponse.ok) {
+          const errorText =
+            await uploadResponse.text();
+
+          throw new Error(
+            `Supabase Storage upload failed: ${errorText}`
+          );
+        }
+
+        const publicUrl =
+          `${SUPABASE_URL}/storage/v1/object/public/${storagePath}`;
+
+        out.push(publicUrl);
       }
 
       return send(res, 200, {
         files: out
       });
     } catch (e) {
-      console.error('UPLOAD ERROR:', e);
+      console.error(
+        'SUPABASE IMAGE UPLOAD ERROR:',
+        e
+      );
 
       return send(res, 500, {
-        error: 'Could not upload image.',
+        error:
+          'Could not upload image to Supabase.',
         details: e.message
       });
     }
@@ -720,8 +746,7 @@ async function route(req, res) {
       });
     }
   }
-
-  /* ---------------------------------------------------------
+    /* ---------------------------------------------------------
      ADMIN CHAT REPLY
      --------------------------------------------------------- */
 
@@ -892,7 +917,6 @@ async function route(req, res) {
     error: 'Not found'
   });
 }
-
 /* =========================================================
    SERVER
    ========================================================= */
